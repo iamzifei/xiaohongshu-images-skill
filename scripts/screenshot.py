@@ -2,8 +2,10 @@
 """
 Screenshot Capture Script for Xiaohongshu Images
 
-Captures sequential screenshots of an HTML page at 3:4 aspect ratio,
-ensuring no text is cut off at boundaries.
+Captures sequential screenshots of the container element at precise 3:4 aspect ratio.
+Ensures no text is cut off - if a line would be split, the current screenshot ends
+at the previous line with whitespace padding, and the next screenshot starts from
+that same line.
 
 Usage:
     python screenshot.py <html_file_path>
@@ -12,9 +14,7 @@ Output:
     Screenshots saved to <html_folder>/screenshots/01.png, 02.png, etc.
 """
 
-import os
 import sys
-import json
 from pathlib import Path
 
 try:
@@ -25,87 +25,223 @@ except ImportError:
     sys.exit(1)
 
 
-# Screenshot dimensions for Xiaohongshu 3:4 ratio
-SCREENSHOT_WIDTH = 1080
-SCREENSHOT_HEIGHT = 1440  # 3:4 ratio
+# Container dimensions (3:4 ratio)
+CONTAINER_WIDTH = 600
+CONTAINER_HEIGHT = 800
+DEVICE_SCALE_FACTOR = 2
+
+# Output dimensions (actual pixel size of screenshots)
+OUTPUT_WIDTH = CONTAINER_WIDTH * DEVICE_SCALE_FACTOR   # 1200px
+OUTPUT_HEIGHT = CONTAINER_HEIGHT * DEVICE_SCALE_FACTOR  # 1600px
 
 
-def find_safe_cut_point(page, y_position: int, search_range: int = 100) -> int:
+def get_container_info(page) -> dict:
     """
-    Find a safe cutting point near y_position where no text is cut.
+    Get information about the container element.
 
-    Searches upward from y_position to find a gap between text elements.
+    Returns:
+        Dict with container's scroll info and dimensions
+    """
+    script = """
+    () => {
+        const container = document.querySelector('.container');
+        if (!container) return null;
+
+        const rect = container.getBoundingClientRect();
+        return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            scrollHeight: container.scrollHeight,
+            clientHeight: container.clientHeight
+        };
+    }
+    """
+    return page.evaluate(script)
+
+
+def scroll_container(page, scroll_top: int) -> int:
+    """
+    Scroll the container to a specific position.
+
+    Returns:
+        Actual scroll position after scrolling
+    """
+    script = f"""
+    () => {{
+        const container = document.querySelector('.container');
+        if (container) {{
+            container.scrollTop = {scroll_top};
+            return container.scrollTop;
+        }}
+        return 0;
+    }}
+    """
+    return page.evaluate(script)
+
+
+def find_safe_cut_position(page, viewport_height: int) -> dict:
+    """
+    Find where to safely cut the current viewport without splitting text.
+
+    Analyzes elements visible in the current viewport and finds the last
+    complete element that fits entirely within the viewport.
 
     Args:
         page: Playwright page object
-        y_position: Target Y position to cut
-        search_range: How far to search upward for safe point
+        viewport_height: Height of the visible area (container clientHeight)
 
     Returns:
-        Safe Y position to cut at
+        Dict with:
+        - safe_y: Y position (relative to viewport top) where it's safe to cut
+        - has_more: Whether there's more content below
+        - next_start: Scroll position for the next screenshot
     """
-    # JavaScript to find text boundaries near the cut point
     script = f"""
     () => {{
-        const targetY = {y_position};
-        const searchRange = {search_range};
+        const container = document.querySelector('.container');
+        if (!container) return {{ safe_y: {viewport_height}, has_more: false, next_start: 0 }};
 
-        // Get all text-containing elements
-        const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, span, a, code, pre, blockquote');
+        const containerRect = container.getBoundingClientRect();
+        const viewportHeight = {viewport_height};
+        const currentScroll = container.scrollTop;
+        const maxScroll = container.scrollHeight - container.clientHeight;
 
-        let safeCutPoint = targetY;
-        let minGap = Infinity;
+        // If we're at or past the end, no more content
+        if (currentScroll >= maxScroll) {{
+            return {{ safe_y: viewportHeight, has_more: false, next_start: currentScroll }};
+        }}
 
-        // Find elements that might be cut
-        for (const el of textElements) {{
+        // Get all block-level elements that could be cut
+        const blockElements = container.querySelectorAll(
+            'p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, div.content > *, img, figure'
+        );
+
+        let lastSafeY = 0;
+        let nextStartScroll = currentScroll + viewportHeight;
+        let foundCutElement = false;
+
+        for (const el of blockElements) {{
             const rect = el.getBoundingClientRect();
-            const elTop = rect.top + window.scrollY;
-            const elBottom = rect.bottom + window.scrollY;
+            // Position relative to container's visible area
+            const elTop = rect.top - containerRect.top;
+            const elBottom = rect.bottom - containerRect.top;
 
-            // Check if this element would be cut at targetY
-            if (elTop < targetY && elBottom > targetY) {{
-                // This element would be cut, find gap above it
-                const gapAbove = targetY - elTop;
-                if (gapAbove < searchRange && gapAbove < minGap) {{
-                    // Cut above this element instead
-                    safeCutPoint = Math.max(0, elTop - 10);
-                    minGap = gapAbove;
-                }}
+            // Skip elements that are completely above the viewport
+            if (elBottom <= 0) continue;
+
+            // Skip elements that start below the viewport
+            if (elTop >= viewportHeight) break;
+
+            // Check if this element is fully visible in the viewport
+            if (elTop >= 0 && elBottom <= viewportHeight) {{
+                // Element fully visible - update safe cut point to its bottom
+                lastSafeY = elBottom;
+            }} else if (elTop >= 0 && elBottom > viewportHeight) {{
+                // Element starts in viewport but extends beyond
+                // Cut before this element
+                foundCutElement = true;
+                // Next screenshot should start with this element visible
+                // We need to scroll so this element's top is at the viewport top
+                nextStartScroll = currentScroll + elTop;
+                break;
+            }} else if (elTop < 0 && elBottom > viewportHeight) {{
+                // Element spans the entire viewport (very tall element)
+                // This is a special case - we'll include what we can
+                lastSafeY = viewportHeight;
+                nextStartScroll = currentScroll + viewportHeight;
+                break;
             }}
         }}
 
-        // Also check for line breaks within text blocks
-        // Find the nearest paragraph boundary
-        const paragraphs = document.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6');
-        for (const p of paragraphs) {{
-            const rect = p.getBoundingClientRect();
-            const pBottom = rect.bottom + window.scrollY;
-
-            // If paragraph ends near our cut point, prefer cutting there
-            if (pBottom < targetY && targetY - pBottom < searchRange) {{
-                const gap = targetY - pBottom;
-                if (gap < minGap) {{
-                    safeCutPoint = pBottom + 5;
-                    minGap = gap;
-                }}
-            }}
+        // If no cut element found, use full viewport
+        if (!foundCutElement) {{
+            lastSafeY = viewportHeight;
+            nextStartScroll = currentScroll + viewportHeight;
         }}
 
-        return Math.max(0, Math.floor(safeCutPoint));
+        // Add small padding to avoid cutting too close to text
+        if (lastSafeY < viewportHeight && lastSafeY > 0) {{
+            lastSafeY = Math.min(lastSafeY + 5, viewportHeight);
+        }}
+
+        const hasMore = nextStartScroll < container.scrollHeight - 10;
+
+        return {{
+            safe_y: Math.floor(lastSafeY),
+            has_more: hasMore,
+            next_start: Math.floor(nextStartScroll)
+        }};
     }}
     """
+    return page.evaluate(script)
 
-    try:
-        safe_y = page.evaluate(script)
-        return safe_y if safe_y > 0 else y_position
-    except Exception as e:
-        print(f"  Warning: Could not find safe cut point: {e}")
-        return y_position
+
+def add_whitespace_mask(page, from_y: int):
+    """
+    Add a whitespace mask to cover content below from_y position.
+
+    This creates a div that covers the container from from_y to the bottom,
+    matching the container's background color.
+    """
+    script = f"""
+    () => {{
+        const container = document.querySelector('.container');
+        if (!container) return false;
+
+        // Remove any existing mask
+        const existingMask = document.getElementById('screenshot-mask');
+        if (existingMask) existingMask.remove();
+
+        // Get container's computed background color
+        const bgColor = window.getComputedStyle(container).backgroundColor || '#F9F9F6';
+
+        // Create mask element
+        const mask = document.createElement('div');
+        mask.id = 'screenshot-mask';
+        mask.style.cssText = `
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: {from_y}px;
+            bottom: 0;
+            background-color: #F9F9F6;
+            z-index: 9999;
+            pointer-events: none;
+        `;
+
+        // Ensure container has relative positioning
+        const containerPosition = window.getComputedStyle(container).position;
+        if (containerPosition === 'static') {{
+            container.style.position = 'relative';
+        }}
+
+        container.appendChild(mask);
+        return true;
+    }}
+    """
+    return page.evaluate(script)
+
+
+def remove_whitespace_mask(page):
+    """Remove the whitespace mask."""
+    script = """
+    () => {
+        const mask = document.getElementById('screenshot-mask');
+        if (mask) {
+            mask.remove();
+            return true;
+        }
+        return false;
+    }
+    """
+    return page.evaluate(script)
 
 
 def capture_screenshots(html_path: Path, output_dir: Path):
     """
-    Capture sequential screenshots of an HTML page.
+    Capture sequential 3:4 ratio screenshots of the container element.
 
     Args:
         html_path: Path to the HTML file
@@ -116,101 +252,97 @@ def capture_screenshots(html_path: Path, output_dir: Path):
 
     print(f"Opening: {html_path}")
     print(f"Screenshots will be saved to: {screenshots_dir}")
-    print(f"Screenshot size: {SCREENSHOT_WIDTH}x{SCREENSHOT_HEIGHT} (3:4 ratio)")
+    print(f"Container size: {CONTAINER_WIDTH}x{CONTAINER_HEIGHT} (3:4 ratio)")
+    print(f"Output size: {OUTPUT_WIDTH}x{OUTPUT_HEIGHT} ({DEVICE_SCALE_FACTOR}x scale)")
     print()
 
     with sync_playwright() as p:
-        # Launch browser
         browser = p.chromium.launch(headless=True)
 
-        # Create page with specific viewport
+        # Viewport larger than container to ensure full visibility
+        viewport_width = CONTAINER_WIDTH + 200
+        viewport_height = CONTAINER_HEIGHT + 200
+
         context = browser.new_context(
-            viewport={"width": SCREENSHOT_WIDTH, "height": SCREENSHOT_HEIGHT},
-            device_scale_factor=2  # Retina quality
+            viewport={"width": viewport_width, "height": viewport_height},
+            device_scale_factor=DEVICE_SCALE_FACTOR
         )
         page = context.new_page()
 
-        # Navigate to the HTML file
+        # Navigate and wait for content
         file_url = f"file://{html_path.resolve()}"
         page.goto(file_url, wait_until="networkidle")
+        page.wait_for_timeout(2000)  # Wait for fonts/images
 
-        # Wait for fonts and images to load
-        page.wait_for_timeout(2000)
+        # Get container info
+        container_info = get_container_info(page)
+        if not container_info:
+            print("Error: Could not find .container element")
+            browser.close()
+            return []
 
-        # Get total page height
-        total_height = page.evaluate("() => document.documentElement.scrollHeight")
-        print(f"Total page height: {total_height}px")
+        print(f"Container dimensions: {container_info['width']}x{container_info['height']}")
+        print(f"Content height: {container_info['scrollHeight']}px")
+        print(f"Visible height: {container_info['clientHeight']}px")
 
-        # Calculate number of screenshots needed
-        current_y = 0
+        container = page.locator('.container')
+        scroll_height = container_info['scrollHeight']
+        client_height = container_info['clientHeight']
+
+        # Start from the top
+        scroll_container(page, 0)
+        page.wait_for_timeout(100)
+
         screenshot_index = 1
         captured_screenshots = []
+        current_scroll = 0
+        max_iterations = 50  # Safety limit
 
-        while current_y < total_height:
-            # Calculate the target end position for this screenshot
-            target_end_y = current_y + SCREENSHOT_HEIGHT
+        print(f"\nCapturing screenshots...")
 
-            if target_end_y >= total_height:
-                # Last screenshot - capture whatever remains
-                actual_height = total_height - current_y
+        while screenshot_index <= max_iterations:
+            # Scroll to current position
+            actual_scroll = scroll_container(page, current_scroll)
+            page.wait_for_timeout(150)
 
-                # Scroll to position
-                page.evaluate(f"window.scrollTo(0, {current_y})")
-                page.wait_for_timeout(200)
+            # Find safe cut position
+            cut_info = find_safe_cut_position(page, client_height)
+            safe_y = cut_info['safe_y']
+            has_more = cut_info['has_more']
+            next_start = cut_info['next_start']
 
-                # Take screenshot
-                filename = f"{screenshot_index:02d}.png"
-                filepath = screenshots_dir / filename
+            # Add mask if we need to hide partial content
+            needs_mask = safe_y < client_height and has_more
+            if needs_mask:
+                add_whitespace_mask(page, safe_y)
+                page.wait_for_timeout(50)
 
-                # For the last screenshot, we might have less than full height
-                # Add white padding if needed
-                page.screenshot(
-                    path=str(filepath),
-                    clip={
-                        "x": 0,
-                        "y": 0,
-                        "width": SCREENSHOT_WIDTH,
-                        "height": min(SCREENSHOT_HEIGHT, actual_height + 50)  # Small buffer
-                    }
-                )
+            # Capture screenshot
+            filename = f"{screenshot_index:02d}.png"
+            filepath = screenshots_dir / filename
+            container.screenshot(path=str(filepath))
 
-                print(f"  Captured: {filename} (final, {actual_height}px of content)")
-                captured_screenshots.append(str(filepath))
+            # Remove mask
+            if needs_mask:
+                remove_whitespace_mask(page)
+
+            visible_height = safe_y if needs_mask else client_height
+            print(f"  {filename}: scroll={current_scroll}, visible={visible_height}px" +
+                  (" [padded]" if needs_mask else ""))
+
+            captured_screenshots.append(str(filepath))
+
+            # Check if we're done
+            if not has_more:
                 break
-            else:
-                # Find safe cut point to avoid cutting text
-                safe_end_y = find_safe_cut_point(page, target_end_y)
-                actual_height = safe_end_y - current_y
 
-                # Ensure we make progress even if safe cut point is the same
-                if actual_height < SCREENSHOT_HEIGHT * 0.5:
-                    actual_height = SCREENSHOT_HEIGHT
-                    safe_end_y = current_y + actual_height
+            # Move to next section
+            current_scroll = next_start
+            screenshot_index += 1
 
-                # Scroll to position
-                page.evaluate(f"window.scrollTo(0, {current_y})")
-                page.wait_for_timeout(200)
-
-                # Take screenshot
-                filename = f"{screenshot_index:02d}.png"
-                filepath = screenshots_dir / filename
-
-                page.screenshot(
-                    path=str(filepath),
-                    clip={
-                        "x": 0,
-                        "y": 0,
-                        "width": SCREENSHOT_WIDTH,
-                        "height": SCREENSHOT_HEIGHT
-                    }
-                )
-
-                print(f"  Captured: {filename} (y: {current_y} to {safe_end_y})")
-                captured_screenshots.append(str(filepath))
-
-                # Move to next section
-                current_y = safe_end_y
-                screenshot_index += 1
+            # Safety check - if we're not making progress
+            if current_scroll >= scroll_height - 10:
+                break
 
         browser.close()
 
@@ -221,8 +353,12 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python screenshot.py <html_file_path>")
         print()
-        print("Captures sequential 3:4 ratio screenshots of an HTML page.")
-        print("Screenshots are saved to <html_folder>/screenshots/")
+        print("Captures sequential 3:4 ratio screenshots of the container element.")
+        print("Features:")
+        print("  - Precise 3:4 aspect ratio (600x800 -> 1200x1600 @2x)")
+        print("  - Smart text boundary detection (no text cut-off)")
+        print("  - Automatic whitespace padding when needed")
+        print("  - Only captures container, excludes page background")
         sys.exit(1)
 
     html_path = Path(sys.argv[1]).resolve()
@@ -231,10 +367,9 @@ def main():
         print(f"Error: File does not exist: {html_path}")
         sys.exit(1)
 
-    if not html_path.suffix.lower() in ['.html', '.htm']:
+    if html_path.suffix.lower() not in ['.html', '.htm']:
         print(f"Warning: File does not appear to be HTML: {html_path}")
 
-    # Output directory is the same as HTML file's directory
     output_dir = html_path.parent
 
     print("=" * 60)
@@ -246,15 +381,16 @@ def main():
 
         print()
         print("=" * 60)
-        print(f"Screenshot capture complete!")
+        print(f"Capture complete!")
         print(f"Total screenshots: {len(screenshots)}")
-        print(f"Location: {output_dir / 'screenshots'}")
+        print(f"Output location: {output_dir / 'screenshots'}")
+        print(f"Each screenshot: {OUTPUT_WIDTH}x{OUTPUT_HEIGHT}px (3:4 ratio)")
         print("=" * 60)
 
         return 0
 
     except Exception as e:
-        print(f"Error during screenshot capture: {e}")
+        print(f"Error during capture: {e}")
         import traceback
         traceback.print_exc()
         return 1

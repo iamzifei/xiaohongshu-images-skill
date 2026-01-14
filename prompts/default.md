@@ -78,6 +78,7 @@ Import the following fonts from Google Fonts:
 - **Dimensions**: 600px × 350px
 - **Image uses: object-fit: cover to ensure no compression**
 - Generate a hand-drawn illustration/comic based on the content's main theme, in a style similar to *The New Yorker* editorial cartoons. (The comic reflects the article's meaning)
+- **Character defaults**: When the illustration includes human figures and the content does not specify gender or age, default to depicting women aged 25-40 years old as the primary characters.
 
 ### 3.2 Title Hierarchy
 
@@ -132,12 +133,13 @@ Import the following fonts from Google Fonts:
 
 ### 4.4 Highlight marker (`<mark>`)
 
-- Background color: `#fff59d` (light yellow)
+- Background color: `#fffde7` (light yellow, subtle)
 - Text color: `#000000`
 - Weight: `bold`
-- Bottom border: `2px solid #ff9800` (orange)
-- Border radius: `4px`
-- Padding: `2px 6px`
+- Bottom border: `1px solid #ffc107` (yellow underline)
+- Border radius: `2px`
+- Padding: `2px 4px`
+- **Usage**: For memorable quotes, core viewpoints, assertions, and other shareable short phrases that readers might want to highlight or share. Apply this style to impactful, quotable sentences that capture the essence of the content.
 
 ---
 
@@ -232,10 +234,18 @@ User will provide article content in `<user_content>` tags, which may contain:
 
 Please convert these contents into a beautifully formatted HTML page according to the above specifications.
 
+**Important**: When processing the article content, proactively identify and apply `<mark>` tags to:
+- Memorable quotes and golden sentences (金句)
+- Core viewpoints and key insights
+- Bold assertions and thought-provoking statements
+- Shareable phrases that capture the essence of the content
+
+These highlighted elements help readers quickly identify the most impactful parts of the article.
+
 ---
 
 ## 10. Special Requirements
 
-Please strictly follow the provided original content, do not modify, delete, or re-polish on your own.
+Please strictly follow the provided original content, do not modify, delete, or re-polish on your own. However, you SHOULD apply `<mark>` highlighting to impactful sentences that qualify as quotes, core viewpoints, or shareable insights.
 
 ---
