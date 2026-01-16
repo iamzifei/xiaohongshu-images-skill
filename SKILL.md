@@ -1,6 +1,6 @@
 ---
 name: xiaohongshu-images
-description: Generate beautifully styled HTML pages from markdown/HTML/txt content with cover images using Gemini AI, then capture screenshots at 3:4 ratio for Xiaohongshu. Use when user wants to create styled article pages, generate article images, or prepare content for Xiaohongshu platform.
+description: Transform markdown/HTML into styled 3:4 ratio images for Xiaohongshu
 ---
 
 # Xiaohongshu Images Skill
