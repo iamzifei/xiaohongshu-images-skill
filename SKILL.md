@@ -138,24 +138,44 @@ Using the prompt template and the user's content:
 
 ### Step 6: Take Screenshots
 
-After generating the HTML, capture sequential screenshots at 3:4 ratio (e.g., 1080×1440 pixels):
+After generating the HTML, capture sequential screenshots of the `.container` element at **exact 3:4 aspect ratio**:
 
-1. **Open the HTML page** using Playwright browser
-2. **Calculate screenshot sections**:
-   - Screenshot height: 1440px (at 1080px width for 3:4 ratio)
-   - Total page height / screenshot height = number of screenshots needed
-3. **For each screenshot**:
-   - Ensure no text is cut off at boundaries
-   - If text would be cut, move the boundary to before that line and leave whitespace
-   - Use smart text detection to find safe cutting points
-4. **Save screenshots** to `output/<folder-name>/screenshots/`:
-   - `01.png`, `02.png`, `03.png`, etc.
+**Screenshot Specifications:**
+- Container viewport: 600px × 800px (3:4 ratio)
+- Output resolution: 1200px × 1600px (2x device scale factor)
+- Each screenshot captures exactly the `.container` element, not the full page
 
-Use the screenshot script:
+**Capture Process:**
+
+1. **Open the HTML page** using Playwright browser with viewport larger than container
+2. **Configure browser context**:
+   - Viewport: 800px × 1000px (larger than container to ensure full visibility)
+   - Device scale factor: 2x for high-resolution output
+3. **Scroll within the container**:
+   - The `.container` element has `overflow-y: auto`, making it internally scrollable
+   - Start from `scrollTop = 0` and increment through the content
+   - Each scroll position captures one 3:4 ratio screenshot
+4. **Smart text boundary detection**:
+   - Before each screenshot, analyze visible block elements (p, h1-h6, li, blockquote, pre, img)
+   - If an element would be cut at the bottom boundary, end the current screenshot before that element
+   - Add whitespace mask to cover partial content, maintaining clean 3:4 frame
+   - Next screenshot starts with the cut element at the top
+5. **Capture the complete `.container` content**:
+   - Use `container.screenshot()` to capture only the container element (excludes page background)
+   - Continue until all content is captured (scrollTop reaches scrollHeight - clientHeight)
+6. **Save screenshots** to `output/<folder-name>/screenshots/`:
+   - Sequential naming: `01.png`, `02.png`, `03.png`, etc.
+
+**Use the screenshot script:**
 
 ```bash
 cd {{SKILL_DIR}} && python scripts/screenshot.py output/<folder-name>/index.html
 ```
+
+**Script Output:**
+- Each screenshot: exactly 1200×1600 pixels (3:4 ratio at 2x scale)
+- Only the cream-colored card content is captured
+- No text is cut off between screenshots
 
 ### Step 7: Report Results
 
