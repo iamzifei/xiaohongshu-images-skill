@@ -83,10 +83,10 @@ More content here with examples...
 
 ### Output
 
-The skill generates:
-- `output/<date-title>/index.html` - Styled HTML page
-- `output/<date-title>/images/cover.png` - AI-generated cover image
-- `output/<date-title>/screenshots/01.png, 02.png, ...` - Sequential screenshots
+The skill generates output in `~/Dev/obsidian/articles/<date-title>/`:
+- `xhs-preview.html` - Styled HTML preview page
+- `_attachments/cover-xhs.png` - AI-generated cover image
+- `_attachments/xhs-01.png, xhs-02.png, ...` - Sequential screenshots
 
 ## Directory Structure
 
@@ -99,10 +99,19 @@ xiaohongshu-images-skill/
 ├── scripts/
 │   ├── generate_images.py    # Gemini image generation
 │   └── screenshot.py         # Screenshot capture
-├── output/               # Generated outputs (gitignored)
 ├── .env                  # Environment variables (gitignored)
 ├── .env.example          # Environment template
 └── .gitignore
+
+Output directory (outside skill folder):
+~/Dev/obsidian/articles/<date>-<title>/
+├── xhs-preview.html          # Styled HTML preview page
+├── prompts.json              # Image generation prompts
+└── _attachments/             # Obsidian-style attachments folder
+    ├── cover-xhs.png         # AI-generated cover image
+    ├── xhs-01.png            # Screenshot page 1
+    ├── xhs-02.png            # Screenshot page 2
+    └── ...
 ```
 
 ## Customization
@@ -152,7 +161,7 @@ SCREENSHOT_HEIGHT = 1440
 Generates cover images using Google Gemini API.
 
 ```bash
-python scripts/generate_images.py output/<folder>/prompts.json
+python scripts/generate_images.py ~/Dev/obsidian/articles/<date>-<title>/prompts.json
 ```
 
 JSON format:
@@ -162,13 +171,17 @@ JSON format:
 }
 ```
 
+Output: `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
+
 ### screenshot.py
 
 Captures sequential screenshots of HTML pages.
 
 ```bash
-python scripts/screenshot.py output/<folder>/index.html
+python scripts/screenshot.py ~/Dev/obsidian/articles/<date>-<title>/xhs-preview.html
 ```
+
+Output: `~/Dev/obsidian/articles/<date>-<title>/_attachments/xhs-01.png`, `xhs-02.png`, etc.
 
 Features:
 - Automatic page scrolling

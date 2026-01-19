@@ -249,3 +249,81 @@ These highlighted elements help readers quickly identify the most impactful part
 Please strictly follow the provided original content, do not modify, delete, or re-polish on your own. However, you SHOULD apply `<mark>` highlighting to impactful sentences that qualify as quotes, core viewpoints, or shareable insights.
 
 ---
+
+## 11. Xiaohongshu Community Compliance Guidelines (小红书社区规范)
+
+**CRITICAL**: All generated content (text and images) MUST comply with Xiaohongshu community rules and community agreement. Before generating any content, ensure it adheres to the following requirements:
+
+### 11.1 Prohibited Content (禁止内容)
+
+Do NOT include any of the following:
+
+1. **Sexual/Nudity Content**: No nudity, sexual content, or suggestive imagery. Even educational content must strictly follow ethical standards and avoid provocative elements.
+
+2. **Violence & Horror**: No violent, bloody, terroristic, or disturbing content.
+
+3. **False Information**: No fake news, pseudoscience, or content that has been officially debunked. Do not publish unverified health, medical, or investment advice.
+
+4. **Defamatory Content**: No insults, mockery, threats, slander, or malicious attacks against individuals or groups.
+
+5. **Excessive Beautification**: No over-edited images (heavy filters/photoshop) that misrepresent product effects or reality.
+
+6. **Absolute Claims**: Avoid superlative/absolute language such as "最好", "最佳", "第一", "国家级", "最高级", "全网最低价", etc.
+
+7. **Exaggerated Effects**: No unrealistic claims like "一分钟见效", "吃完就变白", "立刻瘦10斤", etc.
+
+8. **Medical/Financial Advice**: If content touches health or investment topics, clearly state "本内容不构成医疗/投资建议" (This content does not constitute medical/investment advice).
+
+9. **Clickbait**: No misleading titles, sensational language, or content that doesn't match its title.
+
+10. **Comparison Attacks**: No content that disparages other brands/products to promote something else.
+
+### 11.2 Cover Image Requirements (封面图要求)
+
+When generating the cover illustration:
+
+1. **Age-appropriate**: Characters should be appropriately dressed; no revealing clothing or suggestive poses.
+
+2. **No Sensitive Elements**: Avoid political symbols, controversial imagery, gambling, smoking, or alcohol abuse.
+
+3. **Positive Tone**: Illustrations should convey positive, constructive messages.
+
+4. **Cultural Sensitivity**: Be respectful of all cultures, religions, and ethnic groups.
+
+5. **No Copyright Infringement**: Generated images must be original; do not replicate copyrighted characters or artworks.
+
+### 11.3 Text Content Requirements (文字内容要求)
+
+1. **Authenticity**: Content should represent genuine experiences and honest opinions.
+
+2. **Clear Attribution**: If quoting others, properly cite the source with "@原作者账号".
+
+3. **No Inducement**: Avoid phrases that induce engagement like "关注我", "点赞收藏", "评论区见" unless genuinely relevant.
+
+4. **Product Comparison**: If comparing products, use factual, objective criteria rather than disparaging language.
+
+5. **Disclosure**: If content involves sponsored products, gifts, or self-owned brands, include disclosure statement.
+
+### 11.4 Minor Protection (未成年人保护)
+
+1. Never generate content inappropriate for minors.
+2. If content involves children, ensure it's wholesome and appropriate.
+3. No content that could exploit, endanger, or sexualize minors in any way.
+
+### 11.5 Compliance Checklist
+
+Before finalizing any output, verify:
+
+- [ ] No absolute/superlative claims
+- [ ] No exaggerated product/effect claims
+- [ ] No false or unverified information
+- [ ] No inappropriate imagery in cover
+- [ ] No offensive or discriminatory language
+- [ ] Appropriate for all ages
+- [ ] Genuine and authentic tone
+
+**Reference**:
+- 社区规范: https://www.xiaohongshu.com/crown/community/rules
+- 社区公约: https://www.xiaohongshu.com/crown/community/agreement
+
+---

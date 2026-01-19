@@ -11,7 +11,7 @@ Usage:
     python screenshot.py <html_file_path>
 
 Output:
-    Screenshots saved to <html_folder>/screenshots/01.png, 02.png, etc.
+    Screenshots saved to <html_folder>/_attachments/xhs-01.png, xhs-02.png, etc.
 """
 
 import sys
@@ -247,11 +247,11 @@ def capture_screenshots(html_path: Path, output_dir: Path):
         html_path: Path to the HTML file
         output_dir: Directory to save screenshots
     """
-    screenshots_dir = output_dir / "screenshots"
-    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    attachments_dir = output_dir / "_attachments"
+    attachments_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Opening: {html_path}")
-    print(f"Screenshots will be saved to: {screenshots_dir}")
+    print(f"Screenshots will be saved to: {attachments_dir}")
     print(f"Container size: {CONTAINER_WIDTH}x{CONTAINER_HEIGHT} (3:4 ratio)")
     print(f"Output size: {OUTPUT_WIDTH}x{OUTPUT_HEIGHT} ({DEVICE_SCALE_FACTOR}x scale)")
     print()
@@ -318,8 +318,8 @@ def capture_screenshots(html_path: Path, output_dir: Path):
                 page.wait_for_timeout(50)
 
             # Capture screenshot
-            filename = f"{screenshot_index:02d}.png"
-            filepath = screenshots_dir / filename
+            filename = f"xhs-{screenshot_index:02d}.png"
+            filepath = attachments_dir / filename
             container.screenshot(path=str(filepath))
 
             # Remove mask
@@ -383,7 +383,7 @@ def main():
         print("=" * 60)
         print(f"Capture complete!")
         print(f"Total screenshots: {len(screenshots)}")
-        print(f"Output location: {output_dir / 'screenshots'}")
+        print(f"Output location: {output_dir / '_attachments'}")
         print(f"Each screenshot: {OUTPUT_WIDTH}x{OUTPUT_HEIGHT}px (3:4 ratio)")
         print("=" * 60)
 

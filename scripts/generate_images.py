@@ -5,8 +5,8 @@ Cover Image Generation Script - Using Gemini REST API
 Usage:
     python generate_images.py <prompts.json>
 
-The prompts JSON file should be located in output/<article-folder>/ directory,
-and generated images will be saved to output/<article-folder>/images/ directory.
+The prompts JSON file should be located in the article folder directory,
+and generated images will be saved to <article-folder>/_attachments/ directory.
 
 JSON Format:
 {
@@ -115,7 +115,7 @@ def generate_image(prompt: str, filename: str, images_dir: Path) -> str:
     # Sanitize the prompt to handle newlines and special characters
     clean_prompt = sanitize_prompt(prompt)
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key={GEMINI_API_KEY}"
 
     payload = {
         "contents": [{
@@ -194,8 +194,8 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python generate_images.py <prompts.json>")
         print()
-        print("The prompts JSON file should be in output/<article-folder>/ directory.")
-        print("Generated cover image will be saved to output/<article-folder>/images/cover.png")
+        print("The prompts JSON file should be in the article folder directory.")
+        print("Generated cover image will be saved to <article-folder>/_attachments/cover-xhs.png")
         print()
         print("JSON format examples:")
         print()
@@ -225,10 +225,10 @@ def main():
         print(f"Error: File does not exist: {json_path}")
         sys.exit(1)
 
-    # Determine output directory (images subdirectory of JSON file's directory)
+    # Determine output directory (_attachments subdirectory of JSON file's directory)
     output_dir = json_path.parent
-    images_dir = output_dir / "images"
-    images_dir.mkdir(parents=True, exist_ok=True)
+    attachments_dir = output_dir / "_attachments"
+    attachments_dir.mkdir(parents=True, exist_ok=True)
 
     # Load prompts
     try:
@@ -241,11 +241,11 @@ def main():
     print("Cover Image Generation")
     print(f"Article: {config['title']}")
     print(f"Prompts file: {json_path}")
-    print(f"Output directory: {images_dir}")
+    print(f"Output directory: {attachments_dir}")
     print("=" * 60)
 
     # Generate cover image
-    result = generate_image(config["prompt"], "cover.png", images_dir)
+    result = generate_image(config["prompt"], "cover-xhs.png", attachments_dir)
 
     print()
     print("=" * 60)

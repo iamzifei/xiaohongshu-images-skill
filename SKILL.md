@@ -15,7 +15,7 @@ The skill performs the following workflow:
 2. **Load Prompt Template**: Reads the prompt template from `prompts/default.md` in this skill's directory
 3. **Generate Cover Image**: Uses Gemini API to generate a cover image based on the article content
 4. **Generate HTML**: Creates a beautifully styled HTML page following the prompt template specifications
-5. **Save Output**: Saves the HTML to `/output/<date-article-title>/index.html`
+5. **Save Output**: Saves the HTML to `~/Dev/obsidian/articles/<date-article-title>/xhs-preview.html`
 6. **Capture Screenshots**: Takes sequential 3:4 ratio screenshots of the entire page without cutting text
 
 ## Usage
@@ -47,18 +47,26 @@ From the content, extract:
 - **Title**: The main heading (h1) or first significant title in the content
 - **Date**: Current date in YYYY-MM-DD format
 
-Create the output folder name as: `<date>-<sanitized-title>`
+Create the output folder path as: `~/Dev/obsidian/articles/<date>-<sanitized-title>/`
 - Replace spaces with hyphens
 - Remove special characters
-- Keep it reasonably short (max 50 characters)
+- Keep the title reasonably short (max 50 characters)
+- All images go in `_attachments/` subfolder
 
 ### Step 4: Generate Cover Image with Gemini
+
+**⚠️ COMPLIANCE CHECK**: Before generating, ensure the image concept complies with Xiaohongshu community guidelines (Section 11 of the prompt template). The image must:
+- Be age-appropriate with no revealing clothing or suggestive poses
+- Avoid political symbols, violence, gambling, smoking, or alcohol abuse
+- Convey positive, constructive messages
+- Be culturally sensitive and original
 
 If the prompt template specifies image generation requirements (which it does by default):
 
 1. **Read the environment variables** from `{{SKILL_DIR}}/.env` to get `GEMINI_API_KEY`
 2. **Analyze the article content** to extract the main theme
-3. **Generate image prompt** based on the template:
+3. **Verify compliance** with community guidelines before proceeding
+4. **Generate image prompt** based on the template:
    - Style: Hand-drawn illustration similar to *The New Yorker* editorial cartoons
    - Content: Visual representation of the article's main theme
    - Dimensions: 600px × 350px (will be scaled to fit)
@@ -66,13 +74,13 @@ If the prompt template specifies image generation requirements (which it does by
 4. **Call Gemini API** using the generate_images.py script:
 
 ```bash
-cd {{SKILL_DIR}} && python scripts/generate_images.py output/<folder-name>/prompts.json
+cd {{SKILL_DIR}} && python scripts/generate_images.py ~/Dev/obsidian/articles/<date>-<title>/prompts.json
 ```
 
 Or use direct API call via curl:
 
 ```bash
-curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}" \
+curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${GEMINI_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
@@ -84,9 +92,16 @@ curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0
   }'
 ```
 
-5. **Save the generated image** to `output/<folder-name>/images/cover.png`
+5. **Save the generated image** to `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
 
 ### Step 5: Generate HTML
+
+**⚠️ COMPLIANCE CHECK**: Before generating HTML, review the text content for compliance:
+- No absolute/superlative claims (最好、第一、国家级、最高级、全网最低价)
+- No exaggerated effect claims (一分钟见效、吃完就变白)
+- No false or unverified medical/financial advice
+- No defamatory or offensive language
+- If health/investment topics are involved, add disclaimer text
 
 Using the prompt template and the user's content:
 
@@ -125,7 +140,7 @@ Using the prompt template and the user's content:
 </head>
 <body>
     <div class="container">
-        <img src="images/cover.png" class="cover-image" alt="Cover">
+        <img src="_attachments/cover-xhs.png" class="cover-image" alt="Cover">
         <div class="content">
             <!-- Article content -->
         </div>
@@ -134,7 +149,7 @@ Using the prompt template and the user's content:
 </html>
 ```
 
-4. **Save the HTML** to `output/<folder-name>/index.html`
+4. **Save the HTML** to `~/Dev/obsidian/articles/<date>-<title>/xhs-preview.html`
 
 ### Step 6: Take Screenshots
 
@@ -163,13 +178,13 @@ After generating the HTML, capture sequential screenshots of the `.container` el
 5. **Capture the complete `.container` content**:
    - Use `container.screenshot()` to capture only the container element (excludes page background)
    - Continue until all content is captured (scrollTop reaches scrollHeight - clientHeight)
-6. **Save screenshots** to `output/<folder-name>/screenshots/`:
-   - Sequential naming: `01.png`, `02.png`, `03.png`, etc.
+6. **Save screenshots** to `~/Dev/obsidian/articles/<date>-<title>/_attachments/`:
+   - Sequential naming: `xhs-01.png`, `xhs-02.png`, `xhs-03.png`, etc.
 
 **Use the screenshot script:**
 
 ```bash
-cd {{SKILL_DIR}} && python scripts/screenshot.py output/<folder-name>/index.html
+cd {{SKILL_DIR}} && python scripts/screenshot.py ~/Dev/obsidian/articles/<date>-<title>/xhs-preview.html
 ```
 
 **Script Output:**
@@ -195,18 +210,19 @@ After completion, report to the user:
 ├── scripts/
 │   ├── generate_images.py    # Gemini image generation script
 │   └── screenshot.py         # Screenshot capture script
-├── output/               # Generated outputs (gitignored)
-│   └── <date-title>/
-│       ├── index.html
-│       ├── images/
-│       │   └── cover.png
-│       └── screenshots/
-│           ├── 01.png
-│           ├── 02.png
-│           └── ...
 ├── .env                  # Environment variables (gitignored)
 ├── .env.example          # Environment variable template
 └── .gitignore
+
+Output directory (outside skill folder):
+~/Dev/obsidian/articles/<date>-<title>/
+├── xhs-preview.html          # Styled HTML preview page
+├── prompts.json              # Image generation prompts
+└── _attachments/             # Obsidian-style attachments folder
+    ├── cover-xhs.png         # Cover image (600×350, scaled)
+    ├── xhs-01.png            # Screenshot page 1 (1200×1600)
+    ├── xhs-02.png            # Screenshot page 2
+    └── ...
 ```
 
 ## Environment Variables
@@ -236,13 +252,14 @@ Content for section 1...
 **Assistant Actions:**
 1. Read prompt template from `prompts/default.md`
 2. Extract title: "My Article Title"
-3. Create output folder: `output/2024-01-14-my-article-title/`
+3. Create output folder: `~/Dev/obsidian/articles/2024-01-14-my-article-title/`
 4. Generate cover image using Gemini API based on article theme
-5. Generate styled HTML following template specifications
-6. Save to `output/2024-01-14-my-article-title/index.html`
-7. Open in browser and take 3:4 ratio screenshots
-8. Save screenshots to `output/2024-01-14-my-article-title/screenshots/`
-9. Report completion with file locations
+5. Save cover image to `~/Dev/obsidian/articles/2024-01-14-my-article-title/_attachments/cover-xhs.png`
+6. Generate styled HTML following template specifications
+7. Save to `~/Dev/obsidian/articles/2024-01-14-my-article-title/xhs-preview.html`
+8. Open in browser and take 3:4 ratio screenshots
+9. Save screenshots to `~/Dev/obsidian/articles/2024-01-14-my-article-title/_attachments/xhs-01.png`, etc.
+10. Report completion with file locations
 
 ## Custom Prompt Templates
 
@@ -285,3 +302,29 @@ playwright install chromium
 - The cover image is generated based on the article's main theme
 - Screenshots are optimized for Xiaohongshu's 3:4 aspect ratio
 - Text is never cut off in screenshots - boundaries are adjusted intelligently
+
+## Community Compliance (社区规范合规)
+
+**IMPORTANT**: All generated content must comply with Xiaohongshu community guidelines.
+
+### Quick Reference - Prohibited Content:
+
+| Category | Examples | Action |
+|----------|----------|--------|
+| Absolute claims | 最好、最佳、第一、国家级 | Remove or rephrase |
+| Exaggerated effects | 一分钟见效、立刻瘦10斤 | Remove or add disclaimers |
+| Medical/Financial advice | Health tips, investment suggestions | Add disclaimer: "本内容不构成医疗/投资建议" |
+| Inappropriate imagery | Nudity, violence, political symbols | Regenerate with appropriate content |
+| False information | Pseudoscience, unverified claims | Verify or remove |
+| Defamatory content | Attacks on brands/individuals | Remove entirely |
+
+### Official Guidelines:
+
+- 社区规范: https://www.xiaohongshu.com/crown/community/rules
+- 社区公约: https://www.xiaohongshu.com/crown/community/agreement
+
+### Compliance Workflow:
+
+1. **Before image generation**: Review theme for appropriateness
+2. **Before HTML generation**: Scan text for prohibited phrases
+3. **Before final output**: Run through compliance checklist in prompt template (Section 11.5)
