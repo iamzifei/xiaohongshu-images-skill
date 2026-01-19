@@ -13,7 +13,7 @@ The skill performs the following workflow:
 
 1. **Accept Content**: Receives markdown, HTML, or txt format content from the user
 2. **Load Prompt Template**: Reads the prompt template from `prompts/default.md` in this skill's directory
-3. **Generate Cover Image**: Uses Gemini API to generate a cover image based on the article content
+3. **Generate Cover Image**: Uses `/baoyu-cover-image` skill to generate a cover image based on the article content
 4. **Generate HTML**: Creates a beautifully styled HTML page following the prompt template specifications
 5. **Save Output**: Saves the HTML to `~/Dev/obsidian/articles/<date-article-title>/xhs-preview.html`
 6. **Capture Screenshots**: Takes sequential 3:4 ratio screenshots of the entire page without cutting text
@@ -53,7 +53,7 @@ Create the output folder path as: `~/Dev/obsidian/articles/<date>-<sanitized-tit
 - Keep the title reasonably short (max 50 characters)
 - All images go in `_attachments/` subfolder
 
-### Step 4: Generate Cover Image with Gemini
+### Step 4: Generate Cover Image with baoyu-cover-image Skill
 
 **⚠️ COMPLIANCE CHECK**: Before generating, ensure the image concept complies with Xiaohongshu community guidelines (Section 11 of the prompt template). The image must:
 - Be age-appropriate with no revealing clothing or suggestive poses
@@ -61,38 +61,37 @@ Create the output folder path as: `~/Dev/obsidian/articles/<date>-<sanitized-tit
 - Convey positive, constructive messages
 - Be culturally sensitive and original
 
-If the prompt template specifies image generation requirements (which it does by default):
+Use the `/baoyu-cover-image` skill to generate the cover image:
 
-1. **Read the environment variables** from `{{SKILL_DIR}}/.env` to get `GEMINI_API_KEY`
-2. **Analyze the article content** to extract the main theme
-3. **Verify compliance** with community guidelines before proceeding
-4. **Generate image prompt** based on the template:
-   - Style: Hand-drawn illustration similar to *The New Yorker* editorial cartoons
-   - Content: Visual representation of the article's main theme
-   - Dimensions: 600px × 350px (will be scaled to fit)
-
-4. **Call Gemini API** using the generate_images.py script:
+1. **Invoke the skill** with the article content:
 
 ```bash
-cd {{SKILL_DIR}} && python scripts/generate_images.py ~/Dev/obsidian/articles/<date>-<title>/prompts.json
+/baoyu-cover-image ~/Dev/obsidian/articles/<date>-<title>/index.md --style <auto-or-specified> --no-title
 ```
 
-Or use direct API call via curl:
+Or if the content is not yet saved, pass the content directly to the skill.
+
+2. **Style Selection**:
+   - Let baoyu-cover-image auto-select based on content signals, OR
+   - Specify a style that matches the article tone:
+     - `tech` - AI, coding, digital topics
+     - `warm` - Personal stories, emotional content
+     - `bold` - Controversial, attention-grabbing topics
+     - `minimal` - Simple, zen-like content
+     - `playful` - Fun, casual, beginner-friendly content
+     - `nature` - Wellness, health, organic topics
+     - `retro` - History, vintage, traditional topics
+     - `elegant` - Business, professional content (default)
+
+3. **Use `--no-title` flag** since Xiaohongshu covers typically use visual-only images without embedded text.
+
+4. **Move the generated image** to the correct location:
+   - baoyu-cover-image saves to `imgs/cover.png` relative to the article
+   - Move/copy to `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
 
 ```bash
-curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${GEMINI_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "contents": [{
-      "parts": [{"text": "<image_prompt>"}]
-    }],
-    "generationConfig": {
-      "responseModalities": ["TEXT", "IMAGE"]
-    }
-  }'
+mv ~/Dev/obsidian/articles/<date>-<title>/imgs/cover.png ~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png
 ```
-
-5. **Save the generated image** to `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
 
 ### Step 5: Generate HTML
 
@@ -208,32 +207,27 @@ After completion, report to the user:
 ├── prompts/
 │   └── default.md        # Default HTML/CSS styling prompt
 ├── scripts/
-│   ├── generate_images.py    # Gemini image generation script
-│   └── screenshot.py         # Screenshot capture script
-├── .env                  # Environment variables (gitignored)
-├── .env.example          # Environment variable template
+│   └── screenshot.py     # Screenshot capture script
 └── .gitignore
 
 Output directory (outside skill folder):
 ~/Dev/obsidian/articles/<date>-<title>/
 ├── xhs-preview.html          # Styled HTML preview page
-├── prompts.json              # Image generation prompts
+├── imgs/                     # Created by baoyu-cover-image
+│   ├── prompts/
+│   │   └── cover.md          # Cover image prompt
+│   └── cover.png             # Generated cover (moved to _attachments/)
 └── _attachments/             # Obsidian-style attachments folder
-    ├── cover-xhs.png         # Cover image (600×350, scaled)
+    ├── cover-xhs.png         # Cover image (moved from imgs/cover.png)
     ├── xhs-01.png            # Screenshot page 1 (1200×1600)
     ├── xhs-02.png            # Screenshot page 2
     └── ...
 ```
 
-## Environment Variables
+## Dependencies
 
-Required environment variables in `.env`:
-
-```
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-Get your API key from: https://aistudio.google.com/app/apikey
+This skill depends on:
+- `/baoyu-cover-image` skill for cover image generation (must be installed in `~/.claude/skills/`)
 
 ## Example Workflow
 
@@ -253,8 +247,8 @@ Content for section 1...
 1. Read prompt template from `prompts/default.md`
 2. Extract title: "My Article Title"
 3. Create output folder: `~/Dev/obsidian/articles/2024-01-14-my-article-title/`
-4. Generate cover image using Gemini API based on article theme
-5. Save cover image to `~/Dev/obsidian/articles/2024-01-14-my-article-title/_attachments/cover-xhs.png`
+4. Invoke `/baoyu-cover-image` skill with `--no-title` flag to generate cover image
+5. Move generated cover from `imgs/cover.png` to `_attachments/cover-xhs.png`
 6. Generate styled HTML following template specifications
 7. Save to `~/Dev/obsidian/articles/2024-01-14-my-article-title/xhs-preview.html`
 8. Open in browser and take 3:4 ratio screenshots
@@ -271,7 +265,7 @@ Example: "Use the `xiaohongshu-style` template for this article"
 
 ## Error Handling
 
-If the Gemini API call fails:
+If the `/baoyu-cover-image` skill fails:
 1. Display the error message to the user
 2. Offer to retry or proceed without cover image
 3. If proceeding without image, use a placeholder or omit the cover
@@ -281,17 +275,17 @@ If screenshot capture fails:
 2. Check browser dependencies
 3. Report the specific error to the user
 
-## Dependencies
+## System Requirements
 
 This skill requires:
 - Python 3.8+
-- `python-dotenv` package
 - Playwright for screenshot capture (installed via pip: `pip install playwright && playwright install chromium`)
+- `/baoyu-cover-image` skill installed in `~/.claude/skills/`
 
 Install dependencies:
 
 ```bash
-pip install python-dotenv playwright
+pip install playwright
 playwright install chromium
 ```
 

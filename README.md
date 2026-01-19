@@ -5,7 +5,7 @@ A Claude Code skill that transforms markdown, HTML, or text content into beautif
 ## Features
 
 - **Content Processing**: Accepts markdown, HTML, or plain text content
-- **AI Cover Images**: Generates editorial-style cover illustrations using Google Gemini
+- **AI Cover Images**: Generates editorial-style cover illustrations using `/baoyu-cover-image` skill
 - **Styled HTML Output**: Creates beautifully formatted HTML pages with modern typography
 - **Screenshot Capture**: Takes sequential 3:4 ratio screenshots optimized for Xiaohongshu
 - **Smart Text Boundaries**: Ensures no text is cut off in screenshots
@@ -16,6 +16,7 @@ A Claude Code skill that transforms markdown, HTML, or text content into beautif
 
 - Python 3.8 or higher
 - Claude Code CLI
+- `/baoyu-cover-image` skill installed in `~/.claude/skills/`
 
 ### Setup
 
@@ -32,21 +33,16 @@ ln -s /path/to/xiaohongshu-images-skill ~/.claude/skills/xiaohongshu-images-skil
 2. **Install Python dependencies:**
 
 ```bash
-pip install python-dotenv playwright
+pip install playwright
 playwright install chromium
 ```
 
-3. **Configure environment variables:**
+3. **Ensure baoyu-cover-image skill is installed:**
 
 ```bash
-cd ~/.claude/skills/xiaohongshu-images-skill
-cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
+# Verify the skill exists
+ls ~/.claude/skills/baoyu-cover-image/SKILL.md
 ```
-
-4. **Get your Gemini API Key:**
-
-Visit [Google AI Studio](https://aistudio.google.com/app/apikey) to obtain your API key.
 
 ## Usage
 
@@ -97,18 +93,18 @@ xiaohongshu-images-skill/
 ├── prompts/
 │   └── default.md        # Default HTML/CSS styling prompt
 ├── scripts/
-│   ├── generate_images.py    # Gemini image generation
-│   └── screenshot.py         # Screenshot capture
-├── .env                  # Environment variables (gitignored)
-├── .env.example          # Environment template
+│   └── screenshot.py     # Screenshot capture
 └── .gitignore
 
 Output directory (outside skill folder):
 ~/Dev/obsidian/articles/<date>-<title>/
 ├── xhs-preview.html          # Styled HTML preview page
-├── prompts.json              # Image generation prompts
+├── imgs/                     # Created by baoyu-cover-image
+│   ├── prompts/
+│   │   └── cover.md          # Cover image prompt
+│   └── cover.png             # Generated cover (moved to _attachments/)
 └── _attachments/             # Obsidian-style attachments folder
-    ├── cover-xhs.png         # AI-generated cover image
+    ├── cover-xhs.png         # Cover image (moved from imgs/cover.png)
     ├── xhs-01.png            # Screenshot page 1
     ├── xhs-02.png            # Screenshot page 2
     └── ...
@@ -135,12 +131,6 @@ Edit `prompts/default.md` to customize:
 
 ## Configuration
 
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GEMINI_API_KEY` | Google Gemini API key for image generation | Yes |
-
 ### Screenshot Settings
 
 Default screenshot dimensions (3:4 ratio for Xiaohongshu):
@@ -155,23 +145,6 @@ SCREENSHOT_HEIGHT = 1440
 ```
 
 ## Scripts
-
-### generate_images.py
-
-Generates cover images using Google Gemini API.
-
-```bash
-python scripts/generate_images.py ~/Dev/obsidian/articles/<date>-<title>/prompts.json
-```
-
-JSON format:
-```json
-{
-    "theme": "Article theme for cover image generation"
-}
-```
-
-Output: `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
 
 ### screenshot.py
 
@@ -191,11 +164,11 @@ Features:
 
 ## Troubleshooting
 
-### Gemini API Issues
+### Cover Image Issues
 
-- Verify your API key is correctly set in `.env`
-- Check API quotas at [Google AI Studio](https://aistudio.google.com/)
-- Ensure the API key has access to image generation models
+- Ensure `/baoyu-cover-image` skill is installed and working
+- Check that the skill has proper access to image generation models
+- Try running `/baoyu-cover-image` directly to debug
 
 ### Screenshot Issues
 
@@ -216,6 +189,7 @@ MIT License - See LICENSE file for details.
 
 ## Related Skills
 
+- `baoyu-cover-image` - Cover image generation (required dependency)
 - `chinese-viral-writer` - Chinese viral content creation
 - `wechat-article-formatter` - WeChat article formatting
 - `wechat-article-publisher` - WeChat publishing automation
