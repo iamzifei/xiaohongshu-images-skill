@@ -83,6 +83,14 @@ Or if the content is not yet saved, pass the content directly to the skill.
      - `retro` - History, vintage, traditional topics
      - `elegant` - Business, professional content (default)
 
+   **Special: Mom Reading Club Template**
+
+   When using the `mom-reading-club` template, override the default cover style with **calligraphy & ink-wash illustration (书法水墨风)**:
+
+   ```bash
+   /baoyu-cover-image <article> --style minimal --no-title --custom-prompt "Chinese calligraphy and ink-wash illustration style (书法水墨风). Zen-like simplicity with generous white space (留白). Include subtle ink-wash brush strokes as background texture. Minimalist botanical elements (bamboo, plum blossoms, orchids, lotus) when appropriate. Color palette: ink black (#1a1a1a), warm gray (#666666), subtle gold accents (#C9A962), warm off-white background (#F5F3EE). If human figures are included, depict an elegant woman aged 30-45 with a contemplative, refined demeanor. NO TEXT on the cover."
+   ```
+
 3. **Use `--no-title` flag** since Xiaohongshu covers typically use visual-only images without embedded text.
 
 4. **Move the generated image** to the correct location:
@@ -262,6 +270,28 @@ Users can provide custom prompt templates by:
 2. Specifying the template name when invoking the skill
 
 Example: "Use the `xiaohongshu-style` template for this article"
+
+### Available Templates
+
+| Template | Description | Best For |
+|----------|-------------|----------|
+| `default` | Standard style with New Yorker-style illustrations | General articles |
+| `mom-reading-club` | Calligraphy & ink-wash style with TsangerJinKai02 font | Mom Reading Club (妈妈读书会) brand content |
+
+### Mom Reading Club Template
+
+Use this template for all "Mom Reading Club" branded content:
+
+```
+/xiaohongshu-images <article> --template mom-reading-club
+```
+
+**Features:**
+- **Font**: TsangerJinKai02 (仓耳今楷02) for titles - requires local installation
+- **Cover style**: Chinese calligraphy & ink-wash illustration (书法水墨风)
+- **Aesthetic**: Zen simplicity, elegant restraint, generous white space
+- **Color accent**: Subtle gold (#C9A962)
+- **Target audience**: Cultured mothers aged 30-45
 
 ## Error Handling
 
