@@ -13,10 +13,54 @@ The skill performs the following workflow:
 
 1. **Accept Content**: Receives markdown, HTML, or txt format content from the user
 2. **Load Prompt Template**: Reads the prompt template from `prompts/default.md` in this skill's directory
-3. **Generate Cover Image**: Uses `/baoyu-cover-image` skill to generate a cover image based on the article content
-4. **Generate HTML**: Creates a beautifully styled HTML page following the prompt template specifications
-5. **Save Output**: Saves the HTML to `~/Dev/obsidian/articles/<date-article-title>/xhs-preview.html`
-6. **Capture Screenshots**: Takes sequential 3:4 ratio screenshots of the entire page without cutting text
+3. **Determine Output Account**: Determines which account folder to use (see Account Folder Resolution below)
+4. **Generate Cover Image**: Uses `/baoyu-cover-image` skill to generate a cover image based on the article content
+5. **Generate HTML**: Creates a beautifully styled HTML page following the prompt template specifications
+6. **Save Output**: Saves the HTML to `~/Dev/obsidian/{account_folder}/articles/<date-title>/xhs-preview.html`
+7. **Capture Screenshots**: Takes sequential 3:4 ratio screenshots of the entire page without cutting text
+
+## Account Folder Resolution
+
+The skill determines the output account folder using the following priority:
+
+### Priority 1: Explicit `--account` Parameter
+
+If the user specifies `--account`, use the corresponding folder:
+
+```bash
+/xiaohongshu-images <article> --account james-cn      # → 10_在悉尼和稀泥
+/xiaohongshu-images <article> --account james-en      # → 11_BuildWithJames
+/xiaohongshu-images <article> --account mom-reading-club  # → 12_妈妈在读
+```
+
+### Priority 2: Infer from Input File Path
+
+If no `--account` is specified, try to infer from the input file path:
+
+```
+Input: ~/Dev/obsidian/12_妈妈在读/articles/2026-01-20-xxx/index.md
+       → Output to: ~/Dev/obsidian/12_妈妈在读/articles/2026-01-20-xxx/
+
+Input: ~/Dev/obsidian/10_在悉尼和稀泥/articles/2026-01-20-xxx/index.md
+       → Output to: ~/Dev/obsidian/10_在悉尼和稀泥/articles/2026-01-20-xxx/
+```
+
+### Priority 3: Fallback to Template Mapping
+
+If the account cannot be determined from the path (e.g., raw content input), use template-based mapping:
+
+| Template | Account Folder |
+|----------|----------------|
+| `default` | `10_在悉尼和稀泥` |
+| `mom-reading-club` | `12_妈妈在读` |
+
+### Account Folder Mapping Reference
+
+| Account | Folder |
+|---------|--------|
+| `james-cn` | `10_在悉尼和稀泥` |
+| `james-en` | `11_BuildWithJames` |
+| `mom-reading-club` | `12_妈妈在读` |
 
 ## Usage
 
@@ -41,13 +85,14 @@ Read the prompt template from this skill's directory:
 
 Use the Read tool to get the prompt template content. This template defines the HTML/CSS styling specifications.
 
-### Step 3: Extract Article Title and Date
+### Step 3: Extract Article Title, Date, and Determine Account
 
 From the content, extract:
 - **Title**: The main heading (h1) or first significant title in the content
 - **Date**: Current date in YYYY-MM-DD format
+- **Account Folder**: Determine using the priority rules above (--account → path inference → template mapping)
 
-Create the output folder path as: `~/Dev/obsidian/articles/<date>-<sanitized-title>/`
+Create the output folder path as: `~/Dev/obsidian/{account_folder}/articles/<date>-<sanitized-title>/`
 - Replace spaces with hyphens
 - Remove special characters
 - Keep the title reasonably short (max 50 characters)
@@ -66,7 +111,7 @@ Use the `/baoyu-cover-image` skill to generate the cover image:
 1. **Invoke the skill** with the article content:
 
 ```bash
-/baoyu-cover-image ~/Dev/obsidian/articles/<date>-<title>/index.md --style <auto-or-specified> --no-title
+/baoyu-cover-image ~/Dev/obsidian/{account_folder}/articles/<date>-<title>/index.md --style <auto-or-specified> --no-title
 ```
 
 Or if the content is not yet saved, pass the content directly to the skill.
@@ -95,10 +140,10 @@ Or if the content is not yet saved, pass the content directly to the skill.
 
 4. **Move the generated image** to the correct location:
    - baoyu-cover-image saves to `imgs/cover.png` relative to the article
-   - Move/copy to `~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png`
+   - Move/copy to `~/Dev/obsidian/{account_folder}/articles/<date>-<title>/_attachments/cover-xhs.png`
 
 ```bash
-mv ~/Dev/obsidian/articles/<date>-<title>/imgs/cover.png ~/Dev/obsidian/articles/<date>-<title>/_attachments/cover-xhs.png
+mv ~/Dev/obsidian/{account_folder}/articles/<date>-<title>/imgs/cover.png ~/Dev/obsidian/{account_folder}/articles/<date>-<title>/_attachments/cover-xhs.png
 ```
 
 ### Step 5: Generate HTML
@@ -156,7 +201,7 @@ Using the prompt template and the user's content:
 </html>
 ```
 
-4. **Save the HTML** to `~/Dev/obsidian/articles/<date>-<title>/xhs-preview.html`
+4. **Save the HTML** to `~/Dev/obsidian/{account_folder}/articles/<date>-<title>/xhs-preview.html`
 
 ### Step 6: Take Screenshots
 
@@ -185,13 +230,13 @@ After generating the HTML, capture sequential screenshots of the `.container` el
 5. **Capture the complete `.container` content**:
    - Use `container.screenshot()` to capture only the container element (excludes page background)
    - Continue until all content is captured (scrollTop reaches scrollHeight - clientHeight)
-6. **Save screenshots** to `~/Dev/obsidian/articles/<date>-<title>/_attachments/`:
+6. **Save screenshots** to `~/Dev/obsidian/{account_folder}/articles/<date>-<title>/_attachments/`:
    - Sequential naming: `xhs-01.png`, `xhs-02.png`, `xhs-03.png`, etc.
 
 **Use the screenshot script:**
 
 ```bash
-cd {{SKILL_DIR}} && python scripts/screenshot.py ~/Dev/obsidian/articles/<date>-<title>/xhs-preview.html
+cd {{SKILL_DIR}} && python scripts/screenshot.py ~/Dev/obsidian/{account_folder}/articles/<date>-<title>/xhs-preview.html
 ```
 
 **Script Output:**
@@ -214,12 +259,13 @@ After completion, report to the user:
 ├── SKILL.md              # This file
 ├── prompts/
 │   └── default.md        # Default HTML/CSS styling prompt
+│   └── mom-reading-club.md  # Mom Reading Club styling prompt
 ├── scripts/
 │   └── screenshot.py     # Screenshot capture script
 └── .gitignore
 
 Output directory (outside skill folder):
-~/Dev/obsidian/articles/<date>-<title>/
+~/Dev/obsidian/{account_folder}/articles/<date>-<title>/
 ├── xhs-preview.html          # Styled HTML preview page
 ├── imgs/                     # Created by baoyu-cover-image
 │   ├── prompts/
@@ -230,6 +276,11 @@ Output directory (outside skill folder):
     ├── xhs-01.png            # Screenshot page 1 (1200×1600)
     ├── xhs-02.png            # Screenshot page 2
     └── ...
+
+Account folder mapping:
+- james-cn → 10_在悉尼和稀泥
+- james-en → 11_BuildWithJames
+- mom-reading-club → 12_妈妈在读
 ```
 
 ## Dependencies
@@ -254,14 +305,36 @@ Content for section 1...
 **Assistant Actions:**
 1. Read prompt template from `prompts/default.md`
 2. Extract title: "My Article Title"
-3. Create output folder: `~/Dev/obsidian/articles/2024-01-14-my-article-title/`
-4. Invoke `/baoyu-cover-image` skill with `--no-title` flag to generate cover image
-5. Move generated cover from `imgs/cover.png` to `_attachments/cover-xhs.png`
-6. Generate styled HTML following template specifications
-7. Save to `~/Dev/obsidian/articles/2024-01-14-my-article-title/xhs-preview.html`
-8. Open in browser and take 3:4 ratio screenshots
-9. Save screenshots to `~/Dev/obsidian/articles/2024-01-14-my-article-title/_attachments/xhs-01.png`, etc.
-10. Report completion with file locations
+3. Determine account folder (no --account specified, no path to infer from, using default template → `10_在悉尼和稀泥`)
+4. Create output folder: `~/Dev/obsidian/10_在悉尼和稀泥/articles/2024-01-14-my-article-title/`
+5. Invoke `/baoyu-cover-image` skill with `--no-title` flag to generate cover image
+6. Move generated cover from `imgs/cover.png` to `_attachments/cover-xhs.png`
+7. Generate styled HTML following template specifications
+8. Save to `~/Dev/obsidian/10_在悉尼和稀泥/articles/2024-01-14-my-article-title/xhs-preview.html`
+9. Open in browser and take 3:4 ratio screenshots
+10. Save screenshots to `~/Dev/obsidian/10_在悉尼和稀泥/articles/2024-01-14-my-article-title/_attachments/xhs-01.png`, etc.
+11. Report completion with file locations
+
+**Example with --account parameter:**
+
+```bash
+/xiaohongshu-images ~/path/to/article.md --account mom-reading-club --template mom-reading-club
+```
+
+**Assistant Actions:**
+1. `--account mom-reading-club` specified → use `12_妈妈在读`
+2. Output to: `~/Dev/obsidian/12_妈妈在读/articles/2024-01-14-article-title/`
+
+**Example with path inference:**
+
+```bash
+/xiaohongshu-images ~/Dev/obsidian/12_妈妈在读/articles/2024-01-14-xxx/index.md
+```
+
+**Assistant Actions:**
+1. No --account specified
+2. Input path contains `12_妈妈在读` → infer account folder
+3. Output to same folder: `~/Dev/obsidian/12_妈妈在读/articles/2024-01-14-xxx/`
 
 ## Custom Prompt Templates
 
