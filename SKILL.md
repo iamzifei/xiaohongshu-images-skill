@@ -1,6 +1,7 @@
 ---
 name: xiaohongshu-images
 description: Transform markdown/HTML into styled 3:4 ratio images for Xiaohongshu
+  新手引导：输入 `/小红书配图 新手`、「这个怎么用」「第一次用」「能干嘛」时，走 SKILL.md 的〈新手上路〉，不要直接开始干活。
 ---
 
 # Xiaohongshu Images Skill
@@ -425,3 +426,41 @@ playwright install chromium
 1. **Before image generation**: Review theme for appropriateness
 2. **Before HTML generation**: Scan text for prohibited phrases
 3. **Before final output**: Run through compliance checklist in prompt template (Section 11.5)
+
+
+## 新手上路（用户不知道该输入什么时，走这里）
+
+**触发**：`/小红书配图 新手`、「这个怎么用」「第一次用」「能干嘛」「带我走一遍」，
+以及用户输入了技能名却没有给任何任务的时候。
+
+这个模式的铁律：**不假设、不索取**。用户可能什么都没准备，
+不要一上来就问他要文件、要 API key、要具体需求。按下面四步走：
+
+**一、先说清楚这是什么（三句话以内）**
+
+一句话：**把一段内容拆成一组小红书能直接发的 3:4 图片**。
+自动分页、排版、生成封面，出来就是能用的图，
+不用再去改模板或者调字号。
+
+**二、给编号选项，让他按回车就能继续**
+
+不要问开放式问题（「你想做什么？」对新手是负担）。给 3 个选项加一个默认：
+
+```
+想先看哪个？（直接回车 = 1）
+  1. 先看看做出来长什么样（示例）
+  2. 把我的这段内容做成图
+  3. 有哪些风格可以选
+```
+
+**三、直接演示一遍，边做边解释**
+
+选完立刻做给他看，用**示例数据**，不需要他提供任何东西。
+每做完一步，加一行「💡 刚才发生了什么」，一句话说明这步的意义。
+
+**四、毕业**
+
+演示完只问一个是非题：「要不要用你自己的内容真跑一遍？」
+答是就进正常流程；答否就告诉他随时回来输 `/小红书配图 新手`。
+
+
